@@ -51,13 +51,11 @@ func AppToHomeHandler(fetch *controller.FetchController) http.HandlerFunc {
 		var resp AppData
 		resp.Title = "Rionized"
 		resp.Weather = weather
-		resp.Bus.NextDeparture = "18:03"
-		resp.Bus.Line = "シティリンク"
-		// To-home: from campus -> station
-		resp.Cycle.DepartureName = "新座キャンパス"
-		resp.Cycle.DestinationName = "新座駅"
-		resp.Cycle.AvailableAtDeparture = bike.Campus.Rentable
-		resp.Cycle.AvailableAtDestination = bike.Station.Returnable
+        // To-home: from campus -> station
+        resp.Cycle.DepartureName = "新座キャンパス"
+        resp.Cycle.DestinationName = "新座駅"
+        resp.Cycle.AvailableAtDeparture = bike.Campus.Rentable
+        resp.Cycle.AvailableAtDestination = bike.Station.Returnable
 
 		writeJSON(w, http.StatusOK, resp)
 		log.Printf("AppToHomeHandler: served +%v", resp)

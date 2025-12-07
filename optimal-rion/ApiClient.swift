@@ -7,10 +7,6 @@ struct AppResponse: Decodable {
         let humidityPercent: Int
         let precip10min: Double
     }
-    struct Bus: Decodable {
-        let nextDeparture: String
-        let line: String
-    }
     struct Cycle: Decodable {
         let departureName: String
         let destinationName: String
@@ -20,7 +16,6 @@ struct AppResponse: Decodable {
 
     let title: String
     let weather: Weather
-    let bus: Bus
     let cycle: Cycle
 }
 

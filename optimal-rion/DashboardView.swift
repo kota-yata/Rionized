@@ -7,6 +7,7 @@ struct DashboardView: View {
     @State private var isLoading = false
     @State private var errorMessage: String?
     @Environment(\.openURL) private var openURL
+    @State private var showTimetable = false
 
     var body: some View {
         ZStack {
@@ -105,15 +106,31 @@ struct DashboardView: View {
     private var busCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                Label("Next Bus", systemImage: "bus")
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.accent)
+                HStack {
+                    Label("Next Bus", systemImage: "bus")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accent)
+                    Spacer()
+                    Button { showTimetable = true } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "list.bullet.rectangle")
+                            Text("時刻表")
+                        }
+                        .font(.caption.weight(.semibold))
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(.ultraThinMaterial, in: Capsule())
+                    }
+                    .sheet(isPresented: $showTimetable) {
+                        NavigationStack { BusTimetableView() }
+                    }
+                }
                 HStack(alignment: .firstTextBaseline) {
-                    Text(data.bus.nextDeparture)
+                    Text(nextBusString())
                         .font(.system(size: 34, weight: .bold))
                         .monospacedDigit()
                     Spacer()
-                    Text(data.bus.line)
+                    Text(mode == .toSchool ? "新座駅南口 → 新座キャンパス" : "新座キャンパス → 新座駅南口")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -136,7 +153,7 @@ struct DashboardView: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "arrow.up.forward.app")
-                            Text("予約する")
+                            Text("HELLO CYCLING")
                         }
                         .font(.caption.weight(.semibold))
                         .padding(.vertical, 6)
@@ -203,6 +220,13 @@ struct DashboardView: View {
             .frame(maxWidth: .infinity)
         }
     }
+
+    private func nextBusString(at date: Date = Date()) -> String {
+        if let next = BusTimetable.nextDeparture(for: mode, from: date) {
+            return String(format: "%02d:%02d", next.hour, next.minute)
+        }
+        return "--:--"
+    }
 }
 
 // MARK: - GlassPill helper
@@ -230,7 +254,6 @@ struct GlassPill<Content: View>: View {
 private struct DashboardData {
     var title: String
     var weather: Weather
-    var bus: Bus
     var cycle: Cycle
 
     struct Weather {
@@ -248,11 +271,6 @@ private struct DashboardData {
         var tempC: Int
     }
 
-    struct Bus {
-        var nextDeparture: String
-        var line: String
-    }
-
     struct Cycle {
         var departureName: String
         var destinationName: String
@@ -264,7 +282,6 @@ private struct DashboardData {
         .init(
             title: "Rionized",
             weather: .init(uvIndex: 0, temperatureC: 0, humidityPercent: 0, precip10Min: 0, forecast: []),
-            bus: .init(nextDeparture: "--:--", line: "--"),
             cycle: .init(departureName: "--", destinationName: "--", availableAtDeparture: 0, availableAtDestination: 0)
         )
     }
@@ -293,7 +310,6 @@ extension DashboardView {
                     precip10Min: resp.weather.precip10min,
                     forecast: []
                 ),
-                bus: .init(nextDeparture: resp.bus.nextDeparture, line: resp.bus.line),
                 cycle: .init(
                     departureName: resp.cycle.departureName,
                     destinationName: resp.cycle.destinationName,

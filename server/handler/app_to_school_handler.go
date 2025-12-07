@@ -51,13 +51,11 @@ func AppToSchoolHandler(fetch *controller.FetchController) http.HandlerFunc {
 		var resp AppData
 		resp.Title = "Rionized"
 		resp.Weather = weather
-		resp.Bus.NextDeparture = "08:12"
-		resp.Bus.Line = "キャンパス急行"
-		// To-school: from station -> campus
-		resp.Cycle.DepartureName = "新座駅"
-		resp.Cycle.DestinationName = "新座キャンパス"
-		resp.Cycle.AvailableAtDeparture = bike.Station.Rentable
-		resp.Cycle.AvailableAtDestination = bike.Campus.Returnable
+        // To-school: from station -> campus
+        resp.Cycle.DepartureName = "新座駅"
+        resp.Cycle.DestinationName = "新座キャンパス"
+        resp.Cycle.AvailableAtDeparture = bike.Station.Rentable
+        resp.Cycle.AvailableAtDestination = bike.Campus.Returnable
 
 		writeJSON(w, http.StatusOK, resp)
 		log.Printf("AppToSchoolHandler: served +%v", resp)

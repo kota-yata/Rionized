@@ -10,10 +10,6 @@ import (
 type AppData struct {
     Title   string `json:"title"`
     Weather interface{} `json:"weather"`
-    Bus     struct {
-        NextDeparture string `json:"nextDeparture"`
-        Line          string `json:"line"`
-    } `json:"bus"`
     Cycle struct {
         DepartureName          string `json:"departureName"`
         DestinationName        string `json:"destinationName"`
@@ -40,4 +36,3 @@ func parseFloatParam(r *http.Request, key string, def float64) (float64, error) 
     }
     return strconv.ParseFloat(s, 64)
 }
-
