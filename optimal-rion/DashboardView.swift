@@ -3,44 +3,9 @@ import SwiftUI
 struct DashboardView: View {
     let mode: CommuteMode
 
-    private var data: DashboardData {
-        switch mode {
-        case .toSchool:
-            return .init(
-                title: "Rionized",
-                weather: .init(uvIndex: 3, temperatureC: 22, humidityPercent: 55, rainWithinHour: false, forecast: [
-                    .init(hour: "09", symbol: "cloud.sun", tempC: 21),
-                    .init(hour: "12", symbol: "sun.max", tempC: 24),
-                    .init(hour: "15", symbol: "cloud.sun.fill", tempC: 23),
-                    .init(hour: "18", symbol: "cloud.rain", tempC: 19)
-                ]),
-                bus: .init(nextDeparture: "08:12", line: "キャンパス急行"),
-                cycle: .init(
-                    departureName: "中央駅",
-                    destinationName: "北キャンパス",
-                    availableAtDeparture: 6,
-                    availableAtDestination: 12
-                )
-            )
-        case .toHome:
-            return .init(
-                title: "Rionized",
-                weather: .init(uvIndex: 1, temperatureC: 18, humidityPercent: 68, rainWithinHour: true, forecast: [
-                    .init(hour: "17", symbol: "cloud", tempC: 18),
-                    .init(hour: "19", symbol: "cloud.drizzle", tempC: 17),
-                    .init(hour: "21", symbol: "cloud.moon.rain", tempC: 16),
-                    .init(hour: "23", symbol: "moon.stars", tempC: 15)
-                ]),
-                bus: .init(nextDeparture: "18:03", line: "シティリンク"),
-                cycle: .init(
-                    departureName: "北キャンパス",
-                    destinationName: "中央駅",
-                    availableAtDeparture: 3,
-                    availableAtDestination: 7
-                )
-            )
-        }
-    }
+    @State private var data: DashboardData = .placeholder
+    @State private var isLoading = false
+    @State private var errorMessage: String?
 
     var body: some View {
         ZStack {
@@ -50,21 +15,61 @@ struct DashboardView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     header
+                    if let errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
                     weatherCard
                     busCard
                     cycleCard
+                    HStack {
+                        Spacer()
+                        Button {
+                            Task { await loadData(force: true) }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "arrow.clockwise")
+                                Text("再読み込み")
+                            }
+                            .font(.subheadline.weight(.semibold))
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 12)
+                            .background(.ultraThinMaterial, in: Capsule())
+                        }
+                        .accessibilityLabel("Reload")
+                        Spacer()
+                    }
                     Spacer(minLength: 12)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 20)
             }
+            .overlay(alignment: .bottom) {
+                if isLoading {
+                    ProgressView()
+                        .padding(.bottom, 16)
+                }
+            }
         }
+        .task { await loadData() }
     }
 
     private var header: some View {
-        GlassText(text: data.title)
-            .frame(maxWidth: .infinity)
-            .padding(.bottom, 4)
+        HStack {
+            Spacer()
+            HStack(spacing: 12) {
+                Image("not-kitty")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 44, height: 44)
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(Color.white.opacity(0.3), lineWidth: 1))
+                GlassText(text: data.title)
+            }
+            Spacer()
+        }
+        .padding(.bottom, 4)
     }
 
     private var weatherCard: some View {
@@ -77,17 +82,17 @@ struct DashboardView: View {
                     Spacer()
                 }
                 HStack(spacing: 24) {
-                    metric(title: "UV指数", value: "\(data.weather.uvIndex)")
+                    metric(title: "UV指数", value: formatNumber(data.weather.uvIndex, decimals: 1))
                     Divider().frame(height: 32)
-                    metric(title: "気温", value: "\(data.weather.temperatureC)°C")
+                    metric(title: "気温", value: "\(formatNumber(data.weather.temperatureC, decimals: 1))°C")
                     Divider().frame(height: 32)
                     metric(title: "湿度", value: "\(data.weather.humidityPercent)%")
                 }
                 Divider()
                 HStack(spacing: 10) {
-                    Image(systemName: data.weather.rainWithinHour ? "cloud.rain" : "cloud.sun")
+                    Image(systemName: data.weather.precip10Min > 0 ? "cloud.rain" : "cloud.sun")
                         .foregroundStyle(AppTheme.accent)
-                    Text(data.weather.rainWithinHour ? "1時間以内に雨が降ります" : "1時間以内に雨は降りません")
+                    Text("10分後の降水量: \(formatPrecip(data.weather.precip10Min)) mm")
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(.primary)
@@ -146,6 +151,15 @@ struct DashboardView: View {
         }
     }
 
+    private func formatPrecip(_ value: Double) -> String {
+        let formatted = String(format: "%.1f", value)
+        return formatted
+    }
+
+    private func formatNumber(_ value: Double, decimals: Int = 1) -> String {
+        String(format: "%.\(decimals)f", value)
+    }
+
     
 
     private func stationPill(name: String, available: Int, role: String) -> some View {
@@ -201,10 +215,10 @@ private struct DashboardData {
     var cycle: Cycle
 
     struct Weather {
-        var uvIndex: Int
-        var temperatureC: Int
+        var uvIndex: Double
+        var temperatureC: Double
         var humidityPercent: Int
-        var rainWithinHour: Bool
+        var precip10Min: Double
         var forecast: [ForecastItem]
     }
 
@@ -225,5 +239,65 @@ private struct DashboardData {
         var destinationName: String
         var availableAtDeparture: Int
         var availableAtDestination: Int
+    }
+
+    static var placeholder: DashboardData {
+        .init(
+            title: "Rionized",
+            weather: .init(uvIndex: 0, temperatureC: 0, humidityPercent: 0, precip10Min: 0, forecast: []),
+            bus: .init(nextDeparture: "--:--", line: "--"),
+            cycle: .init(departureName: "--", destinationName: "--", availableAtDeparture: 0, availableAtDestination: 0)
+        )
+    }
+}
+
+// MARK: - Networking
+extension DashboardView {
+    func loadData(force: Bool = false) async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let api = ApiClient()
+            let resp: AppResponse
+            if force {
+                resp = try await api.fetchAppFresh(mode: mode, units: "metric", lang: "ja")
+            } else {
+                let result = try await api.fetchAppWithCache(mode: mode, units: "metric", lang: "ja")
+                resp = result.0
+            }
+            self.data = .init(
+                title: resp.title,
+                weather: .init(
+                    uvIndex: resp.weather.uvIndex,
+                    temperatureC: resp.weather.temperatureC,
+                    humidityPercent: resp.weather.humidityPercent,
+                    precip10Min: resp.weather.precip10min,
+                    forecast: []
+                ),
+                bus: .init(nextDeparture: resp.bus.nextDeparture, line: resp.bus.line),
+                cycle: .init(
+                    departureName: resp.cycle.departureName,
+                    destinationName: resp.cycle.destinationName,
+                    availableAtDeparture: resp.cycle.availableAtDeparture,
+                    availableAtDestination: resp.cycle.availableAtDestination
+                )
+            )
+            // Always refresh live cycle data to ensure real-time values
+            if let live = try? await api.fetchCycle(mode: mode) {
+                self.data.cycle = .init(
+                    departureName: live.departureName,
+                    destinationName: live.destinationName,
+                    availableAtDeparture: live.availableAtDeparture,
+                    availableAtDestination: live.availableAtDestination
+                )
+            }
+            errorMessage = nil
+        } catch ApiError.badStatus(let code) {
+            errorMessage = "Server error: \(code)"
+        } catch ApiError.decoding {
+            errorMessage = "データの解析に失敗しました"
+        } catch {
+            errorMessage = "通信エラーが発生しました"
+        }
     }
 }
