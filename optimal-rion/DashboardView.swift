@@ -6,6 +6,7 @@ struct DashboardView: View {
     @State private var data: DashboardData = .placeholder
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         ZStack {
@@ -123,9 +124,27 @@ struct DashboardView: View {
     private var cycleCard: some View {
         GlassCard {
             VStack(alignment: .leading, spacing: 12) {
-                Label("Rental Cycles", systemImage: "bicycle")
-                    .font(.headline)
-                    .foregroundStyle(AppTheme.accent)
+                HStack {
+                    Label("Rental Cycles", systemImage: "bicycle")
+                        .font(.headline)
+                        .foregroundStyle(AppTheme.accent)
+                    Spacer()
+                    Button {
+                        if let url = URL(string: "https://www.hellocycling.jp/app/openapp/?type=0") {
+                            openURL(url)
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.up.forward.app")
+                            Text("予約する")
+                        }
+                        .font(.caption.weight(.semibold))
+                        .padding(.vertical, 6)
+                        .padding(.horizontal, 10)
+                        .background(.ultraThinMaterial, in: Capsule())
+                    }
+                    .accessibilityLabel("Open HELLO CYCLING")
+                }
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         stationPill(name: data.cycle.departureName, available: data.cycle.availableAtDeparture, role: "出発")
