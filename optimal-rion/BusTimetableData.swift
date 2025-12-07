@@ -114,5 +114,23 @@ enum BusTimetable {
         // No more buses today
         return nil
     }
-}
 
+    // Returns the next departure; if none left today, returns the first bus of the next day.
+    static func nextDepartureRolling(for mode: CommuteMode, from date: Date = Date()) -> (hour: Int, minute: Int, isNextDay: Bool)? {
+        if let nd = nextDeparture(for: mode, from: date) {
+            return (nd.hour, nd.minute, false)
+        }
+        // Move to next day at 00:00 local
+        let cal = Calendar.current
+        guard let nextDay = cal.date(byAdding: .day, value: 1, to: date),
+              let startOfNext = cal.startOfDay(for: nextDay) as Date? else { return nil }
+        let day = dayType(for: nextDay)
+        let dict = (mode == .toSchool) ? toCampus[day] ?? [:] : fromCampus[day] ?? [:]
+        // Find earliest hour with times
+        let hoursSorted = dict.keys.sorted()
+        guard let firstHour = hoursSorted.first, let mins = dict[firstHour], let firstMin = mins.sorted().first else {
+            return nil
+        }
+        return (firstHour, firstMin, true)
+    }
+}

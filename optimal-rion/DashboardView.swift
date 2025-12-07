@@ -222,7 +222,7 @@ struct DashboardView: View {
     }
 
     private func nextBusString(at date: Date = Date()) -> String {
-        if let next = BusTimetable.nextDeparture(for: mode, from: date) {
+        if let next = BusTimetable.nextDepartureRolling(for: mode, from: date) {
             return String(format: "%02d:%02d", next.hour, next.minute)
         }
         return "--:--"
