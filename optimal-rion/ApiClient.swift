@@ -23,30 +23,9 @@ enum ApiError: Error { case invalidURL, badStatus(Int), decoding }
 
 final class ApiClient {
     // Adjust for your server base URL if different
-    var baseURL: URL = URL(string: "http://localhost:8080")!
+    var baseURL: URL = URL(string: "http://tcam.sfc.wide.ad.jp:9567")!
     private static var cache: [String: (date: Date, value: AppResponse)] = [:]
     private let cacheTTL: TimeInterval = 60
-
-    func fetchApp(units: String = "metric", lang: String = "ja") async throws -> AppResponse {
-        var comps = URLComponents(url: baseURL.appendingPathComponent("/api/app"), resolvingAgainstBaseURL: false)
-        comps?.queryItems = [
-            URLQueryItem(name: "units", value: units),
-            URLQueryItem(name: "lang", value: lang)
-        ]
-        guard let url = comps?.url else { throw ApiError.invalidURL }
-
-        var req = URLRequest(url: url)
-        req.timeoutInterval = 10
-
-        let (data, resp) = try await URLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse else { throw ApiError.invalidURL }
-        guard (200..<300).contains(http.statusCode) else { throw ApiError.badStatus(http.statusCode) }
-        do {
-            return try JSONDecoder().decode(AppResponse.self, from: data)
-        } catch {
-            throw ApiError.decoding
-        }
-    }
 
     func fetchApp(mode: CommuteMode, units: String = "metric", lang: String = "ja") async throws -> AppResponse {
         let path: String
